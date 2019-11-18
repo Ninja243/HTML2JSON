@@ -5,10 +5,13 @@ info = []
 
 j = {}
 needComma = False
+needCommaObjString = False
 r = "{"
 
 
 def convert(s):
+    # Make sure s is a string
+    s = str(s)
     # Check if html2json is installed
     try:
         j = {}
@@ -27,13 +30,15 @@ def convert(s):
         except Exception as e:
             errors.append(str(e))
 
-    print("Errors:")
+    print("\nErrors:")
     i = 0
     for error in errors:
         i = i+1
-        print(str(i)+": "+error)
+        print(str(i) + ": " + error)
     if i == 0:
-        print("None")
+        print("None\n")
+    else:
+        print("\n")
 
     print("Warnings:")
     i = 0
@@ -41,15 +46,19 @@ def convert(s):
         i = i+1
         print(str(i)+": "+warning)
     if i == 0:
-        print("None")
+        print("None\n")
+    else:
+        print("\n")
 
     print("Info:")
     i = 0
     for notification in info:
         i = i+1
-        print(str(i)+": "+notification)
+        print(str(i) + ": " + notification)
     if i == 0:
-        print("None")
+        print("None\n")
+    else:
+        print("\n")
 
     if not j:
         return s
@@ -62,7 +71,9 @@ def convertWithoutModule(s):
 
     def start_object(name):
         global needComma
+        global needCommaObjString
         global r
+        needCommaObjString = False
         if needComma:
             r = r + ","
         r = r + "\n \"" + name + "\": {"
@@ -76,20 +87,28 @@ def convertWithoutModule(s):
 
     def object_data(name):
         global r
-        r = r+"\n\"data\":"+"\""+name+"\""
+        r = r + "\n\"data\":" + "\"" + name + "\""
+
+    def object_string(name, data):
+        global needCommaObjString
+        global r
+        if needCommaObjString:
+            r = r+","
+        r = r + "\n\"" + name + "\":" + "\"" + data + "\""
+        needCommaObjString = True
 
     class MyHTMLParser(HTMLParser):
         def handle_starttag(self, tag, attrs):
-            #print("Encountered a start tag:", tag)
             start_object(tag)
+            for a in attrs:
+                object_string(a[0], a[1])
 
         def handle_endtag(self, tag):
-            #print("Encountered an end tag :", tag)
             end_object(tag)
 
         def handle_data(self, data):
-            object_data(data)
-            #print("Encountered some data  :", data)
+            if not data.isspace():
+                object_data(data)
 
     parser = MyHTMLParser()
     parser.feed(s)
@@ -102,7 +121,7 @@ def convertWithoutModule(s):
         r = json.loads(r)
         return json.dumps(r, indent=4, sort_keys=True)
     except Exception as e:
-        warnings.append(str(e))
+        errors.append(str(e))
         return r
 
     # Algo for parsing json string:
